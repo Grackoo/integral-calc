@@ -33,6 +33,13 @@
         <p class="text-center text-sm mb-6 text-gray-400">Ingresa tu integral y obtén el resultado instantáneamente.</p>
 
         <div class="space-y-4">
+            <!-- Campo de entrada para la clave de API -->
+            <div>
+                <label for="apiKey" class="block text-sm font-medium text-gray-300">Clave de API (Necesaria si falla la conexión)</label>
+                <input type="text" id="apiKey" class="mt-1 block w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out" placeholder="Ingresa tu clave de API aquí">
+                <p class="text-xs text-gray-400 mt-1">Puedes obtener una clave de API en <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-indigo-400 hover:underline">Google AI Studio</a>.</p>
+            </div>
+            
             <!-- Campo de entrada para la expresión -->
             <div>
                 <label for="expression" class="block text-sm font-medium text-gray-300">Expresión a integrar (ej: x**2 + 1 + 1/(x**2+1))</label>
@@ -112,6 +119,7 @@
         const upperLimitInput = document.getElementById('upper-limit');
         const resultText = document.getElementById('result-text');
         const loadingSpinner = document.getElementById('loading');
+        const apiKeyInput = document.getElementById('apiKey');
 
         // Lógica para el botón de visualización
         const visualizeBtn = document.getElementById('visualize-btn');
@@ -148,7 +156,7 @@
                 prompt = `Resuelve la integral indefinida de la expresión '${expression}' con respecto a la variable '${variable}'. Proporciona solo el resultado final sin explicaciones.`;
             }
 
-            const apiKey = "AIzaSyAg_b69MDCWEwcj1KvW3M86S2xEug9bNp0";
+            const apiKey = apiKeyInput.value.trim() || "";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
             const payload = { contents: [{ parts: [{ text: prompt }] }] };
 
@@ -226,7 +234,7 @@
             
             const prompt = `Genera un JSON con una lista de ${numPoints} valores de 'y' para la función '${expression}' con respecto a '${variable}', usando los valores de x: [${xValues.join(', ')}]. El output debe ser solo un array JSON de números flotantes.`;
 
-            const apiKey = "";
+            const apiKey = apiKeyInput.value.trim() || "AIzaSyAg_b69MDCWEwcj1KvW3M86S2xEug9bNp0";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
             const payload = { contents: [{ parts: [{ text: prompt }] }] };
 
@@ -323,4 +331,3 @@
     </script>
 </body>
 </html>
-
