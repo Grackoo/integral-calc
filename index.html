@@ -8,6 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js para la visualización -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- MathJax para renderizar ecuaciones LaTeX -->
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         body {
@@ -86,7 +88,8 @@
             <div id="loading" class="flex justify-center items-center hidden">
                 <div class="loading-spinner"></div>
             </div>
-            <p id="result-text" class="text-gray-300 text-lg text-center font-mono break-words" style="white-space: pre-wrap;"></p>
+            <!-- El contenido ahora se renderizará como fórmulas matemáticas -->
+            <p id="result-text" class="text-gray-300 text-lg text-left font-mono break-words" style="white-space: pre-wrap;"></p>
         </div>
 
         <!-- Área del gráfico -->
@@ -151,11 +154,11 @@
                     loadingSpinner.classList.add('hidden');
                     return;
                 }
-                // Solicitud para el procedimiento paso a paso
-                prompt = `Resuelve la integral definida de la expresión '${expression}' con respecto a la variable '${variable}', con límite inferior '${lowerLimit}' y límite superior '${upperLimit}'. Proporciona el procedimiento paso a paso, usando saltos de línea para cada paso. No incluyas comentarios adicionales al inicio o al final.`;
+                // Solicitud para el procedimiento paso a paso con un formato claro para el resultado final
+                prompt = `Resuelve la integral definida de la expresión '${expression}' con respecto a la variable '${variable}', con límite inferior '${lowerLimit}' y límite superior '${upperLimit}'. Proporciona el procedimiento paso a paso. Separa cada paso con un salto de línea. El resultado final debe estar en una nueva línea y etiquetado como "Resultado final:". No incluyas comentarios adicionales al inicio o al final. Responde usando notación LaTeX.`;
             } else {
-                // Solicitud para el procedimiento paso a paso
-                prompt = `Resuelve la integral indefinida de la expresión '${expression}' con respecto a la variable '${variable}'. Proporciona el procedimiento paso a paso, usando saltos de línea para cada paso. No incluyas comentarios adicionales al inicio o al final.`;
+                // Solicitud para el procedimiento paso a paso con un formato claro para el resultado final
+                prompt = `Resuelve la integral indefinida de la expresión '${expression}' con respecto a la variable '${variable}'. Proporciona el procedimiento paso a paso. Separa cada paso con un salto de línea. El resultado final debe estar en una nueva línea y etiquetado como "Resultado final:". No incluyas comentarios adicionales al inicio o al final. Responde usando notación LaTeX.`;
             }
 
             const apiKey = apiKeyInput.value.trim() || "";
@@ -191,8 +194,14 @@
                             result.candidates[0].content && result.candidates[0].content.parts &&
                             result.candidates[0].content.parts.length > 0) {
                             const integralResult = result.candidates[0].content.parts[0].text;
-                            // Ahora el resultado es el procedimiento completo, se elimina el reemplazo de los backticks
                             resultText.textContent = integralResult.trim();
+
+                            // ----------------------------------------------------
+                            // Lógica NUEVA para renderizar el código LaTeX con MathJax
+                            // Esto procesa el texto del resultado y lo convierte en fórmulas visuales.
+                            MathJax.typesetPromise([resultText]);
+                            // ----------------------------------------------------
+
                             return; // Salir de la función si tiene éxito
                         } else {
                             throw new Error("No se pudo obtener un resultado válido de la API.");
