@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Integrales</title>
+    <!-- Incluimos Tailwind CSS para un diseño moderno y responsive -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Incluimos Chart.js para la funcionalidad de graficado -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white rounded-2xl shadow-xl p-8 max-w-2xl w-full">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Calculadora de Integrales</h1>
+        <p class="text-center text-gray-600 mb-8">Ingresa una función y los límites para calcular la integral.</p>
+
+        <div class="space-y-4">
+            <!-- Campo para la función a integrar -->
+            <div>
+                <label for="functionInput" class="block text-gray-700 font-semibold mb-2">Función (ej. x**2 + 5*x + 6)</label>
+                <input type="text" id="functionInput" placeholder="f(x)" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+            </div>
+
+            <!-- Campos para los límites de integración -->
+            <div class="flex space-x-4">
+                <div class="w-1/2">
+                    <label for="lowerLimit" class="block text-gray-700 font-semibold mb-2">Límite Inferior</label>
+                    <input type="number" id="lowerLimit" placeholder="a" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                </div>
+                <div class="w-1/2">
+                    <label for="upperLimit" class="block text-gray-700 font-semibold mb-2">Límite Superior</label>
+                    <input type="number" id="upperLimit" placeholder="b" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones de cálculo -->
+        <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 mt-8">
+            <button id="indefiniteBtn" class="flex-1 bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500">
+                Calcular Integral Indefinida
+            </button>
+            <button id="definiteBtn" class="flex-1 bg-green-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500">
+                Calcular Integral Definida
+            </button>
+        </div>
+
+        <!-- Área de resultados -->
+        <div id="resultBox" class="bg-gray-100 p-6 rounded-lg mt-8 hidden">
+            <div id="loadingIndicator" class="text-center text-gray-500 animate-pulse hidden">
+                Calculando...
+            </div>
+            <div id="resultContent" class="space-y-2">
+                <p id="indefiniteResult" class="font-mono text-lg text-gray-800 break-words"></p>
+                <p id="definiteResult" class="font-mono text-lg text-gray-800 break-words"></p>
+                <!-- Contenedor para la gráfica -->
+                <div id="chartContainer" class="chart-container mt-4 hidden">
+                    <canvas id="integralChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Obtenemos los elementos del DOM que necesitamos
+        const functionInput = document.getElementById('functionInput');
+        const lowerLimitInput = document.getElementById('lowerLimit');
+        const upperLimitInput = document.getElementById('upperLimit');
+        const indefiniteBtn = document.getElementById('indefiniteBtn');
+        const definiteBtn = document.getElementById('definiteBtn');
+        const resultBox = document.getElementById('resultBox');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const indefiniteResult = document.getElementById('indefiniteResult');
+        const definiteResult = document.getElementById('definiteResult');
+        const chartContainer = document.getElementById('chartContainer');
+        const ctx = document.getElementById('integralChart').getContext('2d');
+        let myChart;
+
+        // Asignamos el listener a los botones de cálculo
+        indefiniteBtn.addEventListener('click', () => calculateIntegral('indefinite'));
+        definiteBtn.addEventListener('click', () => calculateIntegral('definite'));
+
+        /**
+         * Función para realizar el cálculo de la integral a través de una llamada a la API de Gemini.
+         * @param {string} type - Tipo de integral a calcular: 'indefinite' o 'definite'.
+         */
+        async function calculateIntegral(type) {
+            const func = functionInput.value;
+            const lower = parseFloat(lowerLimitInput.value);
+            const upper = parseFloat(upperLimitInput.value);
+
+            // Validamos que la función no esté vacía
+            if (!func) {
+                alert('Por favor, introduce una función.');
+                return;
+            }
+            if (type === 'definite' && (isNaN(lower) || isNaN(upper))) {
+                alert('Por favor, introduce límites válidos para la integral definida.');
+                return;
+            }
+
+            // Mostramos el contenedor de resultados y el indicador de carga
+            resultBox.classList.remove('hidden');
+            loadingIndicator.classList.remove('hidden');
+            indefiniteResult.textContent = '';
+            definiteResult.textContent = '';
+            chartContainer.classList.add('hidden');
+
+            const pythonCode = `
+import sympy
+x = sympy.symbols('x')
+f = sympy.sympify('${func}')
+try:
+    if '${type}' == 'indefinite':
+        integral = sympy.integrate(f, x)
+        print(f"Integral indefinida: {integral}")
+    elif '${type}' == 'definite':
+        lower = ${lower}
+        upper = ${upper}
+        integral = sympy.integrate(f, (x, lower, upper))
+        print(f"Integral definida: {integral}")
+except Exception as e:
+    print(f"Error: {e}")
+            `;
+
+            const prompt = `Ejecuta este código Python para calcular una integral y devuelve solo el resultado del print. No añadas explicaciones ni código adicional.\n\n\`\`\`python\n${pythonCode}\n\`\`\``;
+
+            let chatHistory = [];
+            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+            const payload = { contents: chatHistory };
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            
+            try {
+                let response, result, text;
+                const maxRetries = 5;
+                let retryCount = 0;
+                let delay = 1000;
+
+                while (retryCount < maxRetries) {
+                    try {
+                        response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (response.status === 429) {
+                            retryCount++;
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            delay *= 2;
+                            continue;
+                        }
+                        result = await response.json();
+                        if (result.candidates && result.candidates.length > 0 &&
+                            result.candidates[0].content && result.candidates[0].content.parts &&
+                            result.candidates[0].content.parts.length > 0) {
+                            text = result.candidates[0].content.parts[0].text;
+                            break;
+                        }
+                    } catch (e) {
+                        retryCount++;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                        console.error(`Error en el fetch, reintentando... ${retryCount}`);
+                    }
+                }
+                
+                if (text) {
+                    if (type === 'indefinite') {
+                        indefiniteResult.textContent = text;
+                        definiteResult.textContent = '';
+                    } else if (type === 'definite') {
+                        definiteResult.textContent = text;
+                        indefiniteResult.textContent = '';
+                        // Llamamos a la función para graficar
+                        plotFunction(func, lower, upper);
+                    }
+                } else {
+                    indefiniteResult.textContent = 'Error al obtener el resultado.';
+                    definiteResult.textContent = 'Error al obtener el resultado.';
+                }
+                
+            } catch (error) {
+                console.error('Error al calcular la integral:', error);
+                const errorMessage = 'Ocurrió un error inesperado al calcular la integral.';
+                indefiniteResult.textContent = errorMessage;
+                definiteResult.textContent = errorMessage;
+            } finally {
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Función para graficar la función y el área bajo la curva.
+         * @param {string} func - La función a graficar.
+         * @param {number} lower - Límite inferior.
+         * @param {number} upper - Límite superior.
+         */
+        async function plotFunction(func, lower, upper) {
+            chartContainer.classList.remove('hidden');
+
+            const pythonCode = `
+import sympy
+import numpy as np
+x = sympy.symbols('x')
+f = sympy.sympify('${func}')
+
+try:
+    # Creamos un rango de 100 puntos entre los límites
+    x_vals = np.linspace(${lower}, ${upper}, 100)
+    # Evaluamos la función en cada punto
+    y_vals = [f.subs(x, val).evalf() for val in x_vals]
+    
+    # Creamos una lista de diccionarios para facilitar la conversión a JSON
+    points = [{'x': float(x_vals[i]), 'y': float(y_vals[i])} for i in range(len(x_vals))]
+    
+    import json
+    print(json.dumps(points))
+    
+except Exception as e:
+    print(f"Error: {e}")
+            `;
+
+            const prompt = `Ejecuta este código Python para generar una lista de puntos (x, y) de una función y devuelve solo el resultado del print en formato JSON. No añadas explicaciones ni código adicional.\n\n\`\`\`python\n${pythonCode}\n\`\`\``;
+
+            let chatHistory = [];
+            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+            const payload = { 
+                contents: chatHistory,
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                x: { type: "NUMBER" },
+                                y: { type: "NUMBER" }
+                            }
+                        }
+                    }
+                }
+            };
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                const json = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                const points = JSON.parse(json);
+
+                if (myChart) {
+                    myChart.destroy();
+                }
+
+                const data = {
+                    labels: points.map(p => p.x),
+                    datasets: [{
+                        label: 'Función f(x)',
+                        data: points.map(p => p.y),
+                        borderColor: 'rgb(59, 130, 246)', // Tailwind's blue-500
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        borderWidth: 2,
+                        fill: 'origin',
+                        tension: 0.4
+                    }]
+                };
+
+                const config = {
+                    type: 'line',
+                    data: data,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                title: {
+                                    display: true,
+                                    text: 'x'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'f(x)'
+                                }
+                            }
+                        }
+                    }
+                };
+
+                myChart = new Chart(ctx, config);
+
+            } catch (error) {
+                console.error('Error al graficar la función:', error);
+                chartContainer.classList.add('hidden');
+                alert('Ocurrió un error al generar la gráfica.');
+            }
+        }
+    </script>
+</body>
+</html>
