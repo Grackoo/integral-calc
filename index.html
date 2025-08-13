@@ -86,7 +86,7 @@
             <div id="loading" class="flex justify-center items-center hidden">
                 <div class="loading-spinner"></div>
             </div>
-            <p id="result-text" class="text-gray-300 text-lg text-center font-mono break-words"></p>
+            <p id="result-text" class="text-gray-300 text-lg text-center font-mono break-words" style="white-space: pre-wrap;"></p>
         </div>
 
         <!-- Área del gráfico -->
@@ -151,9 +151,11 @@
                     loadingSpinner.classList.add('hidden');
                     return;
                 }
-                prompt = `Resuelve la integral definida de la expresión '${expression}' con respecto a la variable '${variable}', con límite inferior '${lowerLimit}' y límite superior '${upperLimit}'. Proporciona solo el resultado final sin explicaciones.`;
+                // Solicitud para el procedimiento paso a paso
+                prompt = `Resuelve la integral definida de la expresión '${expression}' con respecto a la variable '${variable}', con límite inferior '${lowerLimit}' y límite superior '${upperLimit}'. Proporciona el procedimiento paso a paso, usando saltos de línea para cada paso. No incluyas comentarios adicionales al inicio o al final.`;
             } else {
-                prompt = `Resuelve la integral indefinida de la expresión '${expression}' con respecto a la variable '${variable}'. Proporciona solo el resultado final sin explicaciones.`;
+                // Solicitud para el procedimiento paso a paso
+                prompt = `Resuelve la integral indefinida de la expresión '${expression}' con respecto a la variable '${variable}'. Proporciona el procedimiento paso a paso, usando saltos de línea para cada paso. No incluyas comentarios adicionales al inicio o al final.`;
             }
 
             const apiKey = apiKeyInput.value.trim() || "";
@@ -189,7 +191,8 @@
                             result.candidates[0].content && result.candidates[0].content.parts &&
                             result.candidates[0].content.parts.length > 0) {
                             const integralResult = result.candidates[0].content.parts[0].text;
-                            resultText.textContent = integralResult.trim().replace('`', '').replace('`', '');
+                            // Ahora el resultado es el procedimiento completo, se elimina el reemplazo de los backticks
+                            resultText.textContent = integralResult.trim();
                             return; // Salir de la función si tiene éxito
                         } else {
                             throw new Error("No se pudo obtener un resultado válido de la API.");
@@ -234,7 +237,7 @@
             
             const prompt = `Genera un JSON con una lista de ${numPoints} valores de 'y' para la función '${expression}' con respecto a '${variable}', usando los valores de x: [${xValues.join(', ')}]. El output debe ser solo un array JSON de números flotantes.`;
 
-            const apiKey = apiKeyInput.value.trim() || "AIzaSyAg_b69MDCWEwcj1KvW3M86S2xEug9bNp0";
+            const apiKey = apiKeyInput.value.trim() || "";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
             const payload = { contents: [{ parts: [{ text: prompt }] }] };
 
